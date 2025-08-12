@@ -220,10 +220,21 @@ ansible-vault rekey vault_file.yml
 
 ### API Token Setup
 
-1. **In Proxmox Web Interface:**
-   - Go to `Datacenter → Permissions → API Tokens`
-   - Create token: User: `ansible-user@pve`, Token ID: `ansible`
-   - Set permissions: Path `/`, Role `PVEAuditor` (minimum)
+```bash
+# Create role with adapted permissions
+pveum role add AnsibleProv -privs "Datastore.Allocate Datastore.AllocateSpace Datastore.Audit Pool.Allocate Sys.Audit Sys.Console Sys.Modify VM.Allocate VM.Audit VM.Clone VM.Config.CDROM VM.Config.Cloudinit VM.Config.CPU VM.Config.Disk VM.Config.HWType VM.Config.Memory VM.Config.Network VM.Config.Options VM.Console VM.Migrate VM.Monitor VM.PowerMgmt SDN.Use"
+
+# Create dedicated PVE user for ansible
+pveum user add ansible-user@pve --password <password>
+
+# Assign group membership to new user
+pveum aclmod / -user ansible-user@pve -role AnsibleProv
+
+# Generate Proxmox API token with this user 
+pveum user token add ansible-user@pve ansible -expire 0 -privsep 0 -comment "Ansible token"
+
+# -> Take notes of full-token-id and returned token
+```
 
 2. **Add to Vault:**
    ```yaml
