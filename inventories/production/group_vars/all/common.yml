@@ -25,7 +25,7 @@ monitoring_enabled: true
 monitoring_agent: "telegraf"
 
 
-# Marche pas bien donc les vaults je vais les utiliser direct dans les inventaires et tasks 
+# Marche pas bien donc les vaults je vais les utiliser direct dans les inventaires et tasks mais on peut très bien appeler les vault ici avant de les utiliser dans les playbooks
 # PVE_TOKEN_ID: "{{ vault_PVE_TOKEN_ID }}"
 # PVE_FULL_TOKEN_ID: "{{ vault_PVE_FULL_TOKEN_ID }}"
 # PVE_TOKEN_USER: "{{ vault_PVE_TOKEN_USER }}"
