@@ -220,6 +220,8 @@ ansible-vault rekey vault_file.yml
 
 ### API Token Setup
 
+1. **Proxmox side:**
+
 ```bash
 # Create role with adapted permissions
 pveum role add AnsibleProv -privs "Datastore.Allocate Datastore.AllocateSpace Datastore.Audit Pool.Allocate Sys.Audit Sys.Console Sys.Modify VM.Allocate VM.Audit VM.Clone VM.Config.CDROM VM.Config.Cloudinit VM.Config.CPU VM.Config.Disk VM.Config.HWType VM.Config.Memory VM.Config.Network VM.Config.Options VM.Console VM.Migrate VM.Monitor VM.PowerMgmt SDN.Use"
