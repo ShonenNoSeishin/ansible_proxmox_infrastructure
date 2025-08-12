@@ -64,6 +64,107 @@ ansible_infrastructure/
 └── scripts/              # Utility scripts
 ```
 
+## 📁 Directory Structure Explained
+
+### Core Configuration Files
+```
+├── ansible.cfg           # Main Ansible configuration (inventory path, defaults)
+├── requirements.yml      # Ansible Galaxy collections and roles dependencies
+├── README.md            # This documentation
+├── QUICKSTART.md        # Quick setup guide
+└── LICENSE              # Project license
+```
+
+### Inventories Structure
+```
+inventories/
+├── production/          # Production environment
+│   ├── proxmox.yml      # Dynamic inventory configuration (Proxmox API)
+│   ├── proxmox_env.yml  # Environment-specific Proxmox settings
+│   ├── group_vars/      # Variables applied to groups of hosts
+│   │   ├── all/         # Variables for ALL hosts
+│   │   │   ├── common.yml       # General settings (logging, monitoring)
+│   │   │   ├── vault.yml        # Encrypted secrets (Proxmox API, domain creds)
+│   │   │   └── vault.yml.example # Template for vault creation
+│   │   ├── machines_windows/    # Variables specific to Windows hosts
+│   │   │   ├── main.yml         # Windows-specific settings
+│   │   │   ├── vault.yml        # Encrypted Windows credentials
+│   │   │   └── vault.yml.example # Template for Windows vault
+│   │   ├── machines_linux/      # Variables specific to Linux hosts
+│   │   └── machines_3cx/        # Variables specific to 3CX hosts
+│   └── host_vars/       # Variables for individual hosts (when needed)
+└── staging/             # Staging environment (mirrors production structure)
+```
+
+### Playbooks Organization
+```
+playbooks/
+├── site.yml             # Master playbook that orchestrates everything
+├── common/              # Cross-platform playbooks
+│   └── health_check.yml # System health verification
+├── windows/             # Windows-specific automation
+│   ├── manage_windows_updates.yml  # Comprehensive update management
+│   ├── test_registry.yml          # Registry operations examples
+│   ├── test_windows_common.yml    # Basic connectivity & info gathering
+│   ├── test_win_updates.yml       # Update testing scenarios
+│   └── README_windows_updates.md  # Windows updates documentation
+└── linux/               # Linux-specific automation
+    └── linux_updates.yml # Package management and updates
+```
+
+### Roles Structure
+```
+roles/
+├── common/              # Base role for all systems
+├── windows_base/        # Windows baseline configuration
+├── linux_base/          # Linux baseline configuration
+└── windows_common/      # Windows system management utilities
+    ├── tasks/           # Main automation tasks
+    │   ├── main.yml         # Entry point (includes other task files)
+    │   ├── connectivity.yml # WinRM/SSH connection testing
+    │   └── system_info.yml  # System information gathering
+    ├── defaults/        # Default variables (can be overridden)
+    │   └── main.yml         # Role default settings
+    ├── handlers/        # Event-driven tasks (restarts, notifications)
+    │   └── main.yml         # Service restart handlers
+    ├── meta/           # Role metadata and dependencies
+    │   └── main.yml         # Role dependencies and Galaxy info
+    ├── vars/           # Role variables (higher priority than defaults)
+    │   └── main.yml         # Internal role variables
+    └── README.md       # Role-specific documentation
+```
+
+### Supporting Directories
+```
+├── files/              # Static files to be copied to hosts
+├── templates/          # Jinja2 templates (.j2 files) for dynamic configs
+├── scripts/            # Utility scripts and helpers
+├── vars/              # Additional variable files
+└── vault/             # Legacy vault storage (use group_vars instead)
+```
+
+### Key Concepts
+
+**Inventory Hierarchy (highest to lowest priority):**
+1. `host_vars/` - Individual host settings
+2. `group_vars/machines_*` - Platform-specific settings  
+3. `group_vars/all/` - Global settings
+4. Role `vars/` - Role-internal variables
+5. Role `defaults/` - Default fallback values
+
+**Naming Convention:**
+- `machines_*` groups match VM name patterns in Proxmox
+- `vault.yml` files contain encrypted secrets
+- `main.yml` files contain non-sensitive configuration
+- `.example` files are templates for creating actual config files
+
+**Role Components:**
+- **tasks/**: The actual automation steps
+- **handlers/**: Actions triggered by task changes (like service restarts)
+- **defaults/**: Default values that can be overridden
+- **vars/**: Internal role variables (not meant to be overridden)
+- **meta/**: Role dependencies and Galaxy metadata
+
 ## 🔐 Vault Setup
 
 ### Essential Configuration
