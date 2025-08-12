@@ -405,21 +405,156 @@ curl -k https://proxmox.example.com:8006/api2/json/version
 For Windows systems, use this PowerShell script to configure SSH access:
 
 ```powershell
-# Run as Administrator - Creates ansible user and configures SSH
-param([Parameter(Mandatory=$true)][string]$AnsibleUserPassword)
+# Script PowerShell pour configuration SSH et utilisateur Ansible
+# À exécuter en tant qu'administrateur sur chaque machine Windows
 
-# Install OpenSSH
+param(
+    [Parameter(Mandatory=$true)]
+    [string]$AnsibleUserPassword
+)
+
+Write-Output "=== Début de la configuration SSH et utilisateur Ansible ==="
+
+# Vérification des privilèges administrateur
+if (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
+    Write-Error "Ce script doit être exécuté en tant qu'administrateur"
+    exit 1
+}
+
+# 1. Installation d'OpenSSH
+Write-Output "Installation d'OpenSSH..."
+Get-WindowsCapability -Online | Where-Object Name -like 'OpenSSH*'
+
+# Install the OpenSSH Client
+Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0
+
+# Install the OpenSSH Server
 Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
+
+# 2. Configuration du service SSH
+Write-Output "Configuration du service SSH..."
 Start-Service sshd
 Set-Service -Name sshd -StartupType 'Automatic'
+Restart-Service -Name sshd
 
-# Create ansible user
-$SecurePassword = ConvertTo-SecureString $AnsibleUserPassword -AsPlainText -Force
-New-LocalUser -Name "ansible" -Password $SecurePassword -FullName "Ansible User"
-Add-LocalGroupMember -Group "Administrators" -Member "ansible"
+# 3. Configuration du firewall
+Write-Output "Configuration du firewall..."
+if (!(Get-NetFirewallRule -Name "OpenSSH-Server-In-TCP" -ErrorAction SilentlyContinue | Select-Object Name, Enabled)) {
+    Write-Output "Création de la règle firewall 'OpenSSH-Server-In-TCP'..."
+    New-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -DisplayName 'OpenSSH Server (sshd)' -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22
+} else {
+    Write-Output "La règle firewall 'OpenSSH-Server-In-TCP' existe déjà."
+}
 
-# Configure firewall
-New-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -DisplayName 'OpenSSH Server' -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22
+# 4. Création de l'utilisateur ansible
+Write-Output "Création de l'utilisateur ansible..."
+$AnsibleUser = "ansible"
+
+# Vérifier si l'utilisateur existe déjà
+if (Get-LocalUser -Name $AnsibleUser -ErrorAction SilentlyContinue) {
+    Write-Output "L'utilisateur '$AnsibleUser' existe déjà. Mise à jour du mot de passe..."
+    $SecurePassword = ConvertTo-SecureString $AnsibleUserPassword -AsPlainText -Force
+    Set-LocalUser -Name $AnsibleUser -Password $SecurePassword
+} else {
+    Write-Output "Création de l'utilisateur '$AnsibleUser'..."
+    $SecurePassword = ConvertTo-SecureString $AnsibleUserPassword -AsPlainText -Force
+    New-LocalUser -Name $AnsibleUser -Password $SecurePassword -FullName "Ansible Automation User" -Description "User for Ansible automation" -PasswordNeverExpires
+}
+
+# 5. Ajout de l'utilisateur au groupe Administrateurs
+Write-Output "Ajout de l'utilisateur ansible au groupe Administrateurs..."
+
+# Détecter automatiquement le nom du groupe Administrateur selon la langue
+$adminGroup = "Administrators"
+if (-not (Get-LocalGroup -Name $adminGroup -ErrorAction SilentlyContinue)) {
+    $adminGroup = "Administrateurs"
+}
+
+try {
+    Add-LocalGroupMember -Group $adminGroup -Member $AnsibleUser -ErrorAction Stop
+    Write-Output "Utilisateur ajouté au groupe $adminGroup avec succès."
+} catch {
+    if ($_.Exception.Message -like "*already a member*") {
+        Write-Output "L'utilisateur est déjà membre du groupe $adminGroup."
+    } else {
+        Write-Error "Erreur lors de l'ajout au groupe $adminGroup : $($_.Exception.Message)"
+    }
+}
+
+
+# 6. Configuration SSH spécifique pour l'utilisateur ansible
+Write-Output "Configuration SSH avancée..."
+
+# Créer le répertoire .ssh pour l'utilisateur ansible
+$AnsibleUserHome = "C:\Users\$AnsibleUser"
+$SSHDir = "$AnsibleUserHome\.ssh"
+
+if (!(Test-Path $SSHDir)) {
+    New-Item -ItemType Directory -Path $SSHDir -Force
+    Write-Output "Répertoire SSH créé: $SSHDir"
+}
+
+# Configuration sshd_config pour sécuriser l'accès
+$SSHDConfigPath = "C:\ProgramData\ssh\sshd_config"
+$SSHDConfigBackup = "C:\ProgramData\ssh\sshd_config.backup"
+
+# Sauvegarde de la configuration originale
+if (!(Test-Path $SSHDConfigBackup)) {
+    Copy-Item $SSHDConfigPath $SSHDConfigBackup
+    Write-Output "Sauvegarde de sshd_config créée"
+}
+
+# Configuration SSH sécurisée
+$SSHDConfig = @"
+# Configuration SSH sécurisée pour Ansible
+Port 22
+Protocol 2
+PermitRootLogin no
+PasswordAuthentication yes
+PubkeyAuthentication yes
+AuthorizedKeysFile .ssh/authorized_keys
+PermitEmptyPasswords no
+ChallengeResponseAuthentication no
+UsePAM no
+X11Forwarding no
+PrintMotd no
+AcceptEnv LANG LC_*
+Subsystem sftp sftp-server.exe
+
+# Autoriser seulement l'utilisateur ansible
+AllowUsers ansible
+
+# Restrictions de sécurité
+MaxAuthTries 3
+ClientAliveInterval 300
+ClientAliveCountMax 2
+"@
+
+Set-Content -Path $SSHDConfigPath -Value $SSHDConfig
+Write-Output "Configuration SSH mise à jour"
+
+# 7. Redémarrage du service SSH
+Write-Output "Redémarrage du service SSH..."
+Restart-Service sshd
+
+# 8. Test de la configuration
+Write-Output "Test de la configuration..."
+$SSHStatus = Get-Service sshd
+Write-Output "Statut du service SSH: $($SSHStatus.Status)"
+
+# Vérification de l'écoute sur le port 22
+$Listening = Get-NetTCPConnection -LocalPort 22 -State Listen -ErrorAction SilentlyContinue
+if ($Listening) {
+    Write-Output "SSH écoute correctement sur le port 22"
+} else {
+    Write-Warning "SSH ne semble pas écouter sur le port 22"
+}
+
+Write-Output "=== Configuration terminée ==="
+Write-Output "Utilisateur: $AnsibleUser"
+Write-Output "Répertoire SSH: $SSHDir"
+Write-Output "Pour tester la connexion depuis votre machine Debian:"
+Write-Output "ssh $AnsibleUser@$(hostname)"
 ```
 
 ## 📞 Support
