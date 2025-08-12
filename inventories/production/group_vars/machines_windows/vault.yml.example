@@ -1,0 +1,23 @@
+---
+# Example vault file for Windows machines
+# Copy this file to vault.yml and encrypt it with ansible-vault
+# Command: ansible-vault create inventories/production/group_vars/machines_windows/vault.yml
+
+# =============================================================================
+# WINDOWS AUTHENTICATION
+# =============================================================================
+# Default Windows connection settings
+vault_windows_ansible_connection: "ssh"  # or "winrm" if using OpenSSH
+vault_windows_ansible_port: 22          # 5985 for HTTP, 5986 for HTTPS, 22 for SSH
+vault_windows_ansible_user: "ansible"
+vault_windows_ansible_password: "WindowsPassword123!"
+
+# =============================================================================
+# NOTES
+# =============================================================================
+# Windows-specific notes:
+# 1. Use strong passwords that meet Windows complexity requirements
+# 2. Consider using Group Managed Service Accounts (gMSA) for service accounts
+# 3. Regularly rotate passwords according to your security policy
+# 4. Test WinRM/SSH connectivity before deploying
+# 5. Ensure firewall rules allow Ansible connections

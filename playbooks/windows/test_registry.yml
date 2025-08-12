@@ -1,0 +1,251 @@
+# Playbook de test - Ajout de clés de registre Windows
+# Fichier: playbooks/windows/test_registry.yml
+
+---
+- name: Test de connexion et gestion du registre Windows
+  hosts: machines_windows:&proxmox_all_running
+  gather_facts: true
+  roles:
+    - windows_common
+  vars:
+    # Variables locales pour ce playbook
+    company_name: "MyCompany"
+    registry_base_path: "HKLM:\\Software\\{{ company_name }}"
+    test_values:
+      - name: "InstallDate"
+        data: "{{ ansible_date_time.iso8601 }}"
+        type: "string"
+      - name: "Version"
+        data: "1.0.0"
+        type: "string"
+      - name: "Enabled"
+        data: 1
+        type: "dword"
+      - name: "ConfigPath"
+        data: "C:\\Program Files\\{{ company_name }}\\Config"
+        type: "string"
+      - name: "MaxConnections"
+        data: 100
+        type: "dword"
+
+  tasks:
+    # Les tâches de connectivité et d'informations système sont maintenant gérées par le rôle windows_common
+    # Vous pouvez accéder aux faits via : windows_connectivity_status, windows_system_info, windows_host_facts
+
+    # Étape 3: Vérification des prérequis
+    - name: Vérifier si le chemin de base du registre existe
+      ansible.windows.win_reg_stat:
+        path: "{{ registry_base_path }}"
+      register: base_path_check
+      tags: 
+        - registry
+        - prereq
+
+    # Étape 4: Créer la clé de base si elle n'existe pas
+    - name: Créer la clé de registre de base
+      ansible.windows.win_regedit:
+        path: "{{ registry_base_path }}"
+        state: present
+      register: base_key_creation
+      tags: 
+        - registry
+        - setup
+
+    - name: Confirmer la création de la clé de base
+      ansible.builtin.debug:
+        msg: "Clé de base {{ registry_base_path }} créée avec succès"
+      when: base_key_creation.changed
+      tags: 
+        - registry
+        - debug
+
+    # Étape 5: Ajouter les sous-clés de test
+    - name: Créer les sous-clés de registre
+      ansible.windows.win_regedit:
+        path: "{{ registry_base_path }}\\{{ item }}"
+        state: present
+      loop:
+        - "Configuration"
+        - "Logs"
+        - "Monitoring"
+        - "Backup"
+      register: subkey_creation
+      tags: 
+        - registry
+        - subkeys
+
+    # Étape 6: Ajouter les valeurs de test
+    - name: Ajouter les valeurs de registre de test
+      ansible.windows.win_regedit:
+        path: "{{ registry_base_path }}"
+        name: "{{ item.name }}"
+        data: "{{ item.data }}"
+        type: "{{ item.type }}"
+        state: present
+      loop: "{{ test_values }}"
+      register: value_creation
+      tags: 
+        - registry
+        - values
+
+    # Étape 7: Ajouter des valeurs spécifiques dans les sous-clés
+    - name: Ajouter des configurations dans les sous-clés
+      ansible.windows.win_regedit:
+        path: "{{ registry_base_path }}\\Configuration"
+        name: "{{ item.name }}"
+        data: "{{ item.data }}"
+        type: "{{ item.type }}"
+        state: present
+      loop:
+        - name: "LogLevel"
+          data: "INFO"
+          type: "string"
+        - name: "DebugMode"
+          data: 0
+          type: "dword"
+        - name: "ConfigFile"
+          data: "C:\\Program Files\\{{ company_name }}\\config.ini"
+          type: "string"
+      tags: 
+        - registry
+        - config
+
+    - name: Ajouter des paramètres de monitoring
+      ansible.windows.win_regedit:
+        path: "{{ registry_base_path }}\\Monitoring"
+        name: "{{ item.name }}"
+        data: "{{ item.data }}"
+        type: "{{ item.type }}"
+        state: present
+      loop:
+        - name: "Enabled"
+          data: 1
+          type: "dword"
+        - name: "Interval"
+          data: 300
+          type: "dword"
+        - name: "ServerURL"
+          data: "http://monitoring.company.local:8080/api"
+          type: "string"
+      tags: 
+        - registry
+        - monitoring
+
+    # Étape 8: Vérification des valeurs créées
+    - name: Vérifier les valeurs de registre créées
+      ansible.windows.win_reg_stat:
+        path: "{{ registry_base_path }}"
+        name: "{{ item.name }}"
+      loop: "{{ test_values }}"
+      register: registry_verification
+      tags: 
+        - registry
+        - verification
+
+    - name: Afficher le résultat de la vérification
+      ansible.builtin.debug:
+        msg: |
+          Clé: {{ item.item.name }}
+          Existe: {{ item.exists }}
+          Valeur: {{ item.value | default('N/A') }}
+          Type: {{ item.type | default('N/A') }}
+      loop: "{{ registry_verification.results }}"
+      tags: 
+        - registry
+        - debug
+
+    # Étape 9: Test de lecture complète de l'arborescence
+    - name: Lire toute l'arborescence créée
+      ansible.windows.win_shell: |
+        function Get-RegistryTree {
+            param($Path)
+            
+            $result = @{}
+            
+            # Lire les valeurs de la clé actuelle
+            try {
+                $key = Get-Item $Path -ErrorAction Stop
+                $values = @{}
+                foreach ($valueName in $key.GetValueNames()) {
+                    $values[$valueName] = @{
+                        Value = $key.GetValue($valueName)
+                        Type = $key.GetValueKind($valueName)
+                    }
+                }
+                $result.Values = $values
+                
+                # Lire les sous-clés
+                $subKeys = @{}
+                foreach ($subKeyName in $key.GetSubKeyNames()) {
+                    $subKeyPath = Join-Path $Path $subKeyName
+                    $subKeys[$subKeyName] = Get-RegistryTree $subKeyPath
+                }
+                $result.SubKeys = $subKeys
+            }
+            catch {
+                $result.Error = $_.Exception.Message
+            }
+            
+            return $result
+        }
+        
+        $tree = Get-RegistryTree "{{ registry_base_path }}"
+        $tree | ConvertTo-Json -Depth 10
+      register: registry_tree
+      tags: 
+        - registry
+        - tree
+        - verification
+
+    - name: Afficher l'arborescence complète
+      ansible.builtin.debug:
+        var: registry_tree.stdout | from_json
+      tags: 
+        - registry
+        - debug
+
+    # Étape 10: Création d'un rapport de synthèse
+    - name: Créer un rapport de synthèse
+      ansible.builtin.set_fact:
+        test_report:
+          machine: "{{ inventory_hostname }}"
+          ip: "{{ ansible_host }}"
+          test_date: "{{ ansible_date_time.iso8601 }}"
+          connectivity: "{{ windows_connectivity_status | default('UNKNOWN') }}"
+          system_info: "{{ windows_system_info | default({}) }}"
+          registry_base_created: "{{ 'OK' if base_key_creation.changed or base_path_check.exists else 'FAILED' }}"
+          values_created: "{{ test_values | length }}"
+          subkeys_created: "{{ subkey_creation.results | selectattr('changed') | list | length }}"
+          verification_passed: "{{ registry_verification.results | selectattr('exists') | list | length }}"
+      tags: 
+        - report
+        - summary
+
+    - name: Afficher le rapport de synthèse
+      ansible.builtin.debug:
+        msg: |
+          ==================== RAPPORT DE TEST ====================
+          Machine: {{ test_report.machine }} ({{ test_report.system_info.ComputerName | default('Unknown') }})
+          IP: {{ test_report.ip }}
+          OS: {{ test_report.system_info.WindowsVersion | default('Unknown') }} (Build {{ test_report.system_info.BuildNumber | default('Unknown') }})
+          RAM: {{ test_report.system_info.TotalRAM | default('Unknown') }} GB
+          Date du test: {{ test_report.test_date }}
+          
+          RÉSULTATS:
+          - Connectivité: {{ test_report.connectivity }}
+          - Clé de base créée: {{ test_report.registry_base_created }}
+          - Valeurs créées: {{ test_report.values_created }}
+          - Sous-clés créées: {{ test_report.subkeys_created }}
+          - Vérifications réussies: {{ test_report.verification_passed }}/{{ test_values | length }}
+          
+          STATUS: {{ 'SUCCESS' if (test_report.connectivity == 'OK' and test_report.verification_passed == (test_values | length)) else 'PARTIAL' }}
+          ========================================================
+      tags: 
+        - report
+        - summary
+
+  # Gestionnaires pour les notifications
+  handlers:
+    - name: Notifier la création de registre
+      ansible.builtin.debug:
+        msg: "Les clés de registre ont été créées avec succès sur {{ inventory_hostname }}"

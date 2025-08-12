@@ -1,0 +1,26 @@
+---
+# Example vault file for global variables
+# Copy this file to vault.yml and encrypt it with ansible-vault
+# Command: ansible-vault create inventories/production/group_vars/all/vault.yml
+
+# =============================================================================
+# PROXMOX CONFIGURATION
+# =============================================================================
+# Proxmox API credentials for dynamic inventory
+vault_PVE_TOKEN_USER: "ansible-user@pve"
+vault_PVE_TOKEN_ID: "ansible_token_id"
+vault_PVE_TOKEN_SECRET: "your-proxmox-api-token-secret-here"
+vault_PVE_FULL_TOKEN_ID: "ansible-user@pve!ansible_token_id"
+
+# Proxmox Ansible user password (for VM management if needed)
+vault_ANSIBLE_USER_PWD: "your-ansible-user-password"
+
+# =============================================================================
+# NOTES
+# =============================================================================
+# Remember to:
+# 1. Replace all placeholder values with real credentials
+# 2. Use strong, unique passwords
+# 3. Follow your organization's password policy
+# 4. Never commit this file to version control once it contains real data
+# 5. Use ansible-vault to encrypt this file before storing

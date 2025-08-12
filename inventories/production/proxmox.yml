@@ -1,0 +1,77 @@
+plugin: 'community.proxmox.proxmox'
+url: 'https://10.10.50.124:8006'
+# normalement ça devrait marcher comme ça mais comme c'est un inventaire dynamique, il n'aime pas trop charger les variables avant de run ...
+# user: "{{ PVE_TOKEN_USER }}"
+# token_id: "{{ PVE_TOKEN_ID }}"
+# token_secret: "{{ PVE_TOKEN_SECRET }}"
+
+# donc je vais utiliser un lookup pour charger les variables depuis le vault
+user: "{{ (lookup('ansible.builtin.unvault', 'inventories/production/group_vars/all/vault.yml') | ansible.builtin.from_yaml).vault_PVE_TOKEN_USER }}"
+token_id: "{{ (lookup('ansible.builtin.unvault', 'inventories/production/group_vars/all/vault.yml') | ansible.builtin.from_yaml).vault_PVE_TOKEN_ID }}"
+token_secret: "{{ (lookup('ansible.builtin.unvault', 'inventories/production/group_vars/all/vault.yml') | ansible.builtin.from_yaml).vault_PVE_TOKEN_SECRET }}"
+
+# Configuration optionnelle mais recommandée
+validate_certs: false  # Si vous utilisez des certificats auto-signés
+want_facts: true
+
+# Configuration des variables d'hôte
+compose:
+  ansible_host: proxmox_agent_interfaces[0]['ip-addresses'][1] | regex_replace('/.*', '') if proxmox_agent_interfaces is defined and proxmox_agent_interfaces|length > 0 else (proxmox_ipconfig0.ip | default(proxmox_net0.ip) | regex_replace('/.*', '') if proxmox_ipconfig0 is defined or proxmox_net0 is defined else proxmox_name)
+  vm_id: proxmox_vmid
+  vm_name: proxmox_name
+  vm_tags: proxmox_tags | default([])
+
+# Groupes automatiques basés sur des critères
+keyed_groups:
+  # Groupe pour les machines avec "3cx" dans le nom
+  - key: proxmox_name | regex_search('3cx', ignorecase=True)
+    prefix: name_3cx
+    separator: ""
+  
+  # Groupe pour les machines avec le tag "test"
+  - key: proxmox_tags
+    prefix: tag
+    separator: "_"
+  
+  # Groupes supplémentaires utiles
+  - key: proxmox_status
+    prefix: status
+  
+  - key: proxmox_type
+    prefix: type
+
+# Groupes personnalisés avec des conditions plus complexes
+groups:
+  # Toutes les machines contenant "3cx" dans le nom (insensible à la casse)
+  machines_3cx: proxmox_name | regex_search('3cx', ignorecase=True)
+  
+  # Toutes les machines avec le tag "test"
+  machines_test: '"test" in (proxmox_tags | default([]))'
+  
+  # Exemple : machines de production (tag "prod")
+  machines_prod: '"prod" in (proxmox_tags | default([]))'
+  
+  # Exemple : machines Windows (basé sur le nom ou l'OS)
+  machines_windows: proxmox_name | regex_search('win|windows', ignorecase=True)
+  
+  # Exemple : machines Linux
+  machines_linux: proxmox_name | regex_search('linux|ubuntu|debian|centos|rhel', ignorecase=True)
+
+# Filtres optionnels (décommentez si nécessaire)
+# filters:
+#   - proxmox_status == "running"  # Seulement les VMs en cours d'exécution
+#   - proxmox_type == "qemu"       # Seulement les VMs QEMU (pas les containers LXC)
+
+# Variables globales
+#hostvar_expressions:
+#  project: proxmox_tags | selectattr('match', '^project:') | map('regex_replace', '^project:', '') | first | default('default')
+
+# Voir tous les groupes
+#ansible-inventory -i inventories/production/proxmox.yml --graph --ask-vault-pass
+
+# Lister les machines du groupe machines_test
+#ansible-inventory -i inventories/production/proxmox.yml --graph machines_test --ask-vault-pass
+#ansible-inventory -i inventories/production/proxmox.yml --list machines_test --ask-vault-pass
+
+# Voir toutes les variables d'une machine spécifique
+#ansible-inventory -i inventories/production/proxmox.yml --host <nom-machine> --ask-vault-pass

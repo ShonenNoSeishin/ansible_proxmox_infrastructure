@@ -1,0 +1,33 @@
+---
+# Variables communes à toutes les machines
+ntp_servers:
+  - 10.10.50.1
+  - pool.ntp.org
+
+dns_servers:
+  - 8.8.8.8
+  - 8.8.4.4
+
+# Proxy settings si nécessaire
+# http_proxy: "http://proxy.company.com:8080"
+# https_proxy: "http://proxy.company.com:8080"
+
+# Logging
+log_level: INFO
+log_retention_days: 30
+
+# Backup
+backup_enabled: true
+backup_schedule: "0 2 * * *"  # 2h du matin tous les jours
+
+# Monitoring
+monitoring_enabled: true
+monitoring_agent: "telegraf"
+
+
+# Marche pas bien donc les vaults je vais les utiliser direct dans les inventaires et tasks 
+# PVE_TOKEN_ID: "{{ vault_PVE_TOKEN_ID }}"
+# PVE_FULL_TOKEN_ID: "{{ vault_PVE_FULL_TOKEN_ID }}"
+# PVE_TOKEN_USER: "{{ vault_PVE_TOKEN_USER }}"
+# PVE_TOKEN_SECRET: "{{ vault_PVE_TOKEN_SECRET }}"
+# PVE_ANSIBLE_USER_PWD: "{{ vault_ANSIBLE_USER_PWD }}"

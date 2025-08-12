@@ -1,0 +1,18 @@
+---
+# Rôle windows_common - Tâches communes pour Windows
+# Ce rôle contient les tâches de base pour tous les playbooks Windows
+
+- name: Inclure les tâches de connectivité
+  ansible.builtin.include_tasks: connectivity.yml
+  when: windows_common_test_connectivity | default(true)
+  tags:
+    - connectivity
+    - windows_common
+
+- name: Inclure les tâches de collecte d'informations système
+  ansible.builtin.include_tasks: system_info.yml
+  when: windows_common_collect_system_info | default(true)
+  tags:
+    - system_info
+    - windows_common
+    - facts

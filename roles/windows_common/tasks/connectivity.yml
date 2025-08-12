@@ -1,0 +1,38 @@
+---
+# Tâches de test de connectivité Windows
+
+- name: Test de connectivité Windows
+  ansible.windows.win_ping:
+  register: ping_result
+  tags: 
+    - connectivity
+    - test
+
+- name: Afficher les informations de connexion
+  ansible.builtin.debug:
+    msg: |
+      Machine: {{ inventory_hostname }}
+      IP: {{ ansible_host | default('Non défini') }}
+      Utilisateur: {{ ansible_user | default('Non défini') }}
+      Connexion: {{ ping_result.ping }}
+      Port: {{ ansible_port | default('Non défini') }}
+      Type de connexion: {{ ansible_connection | default('Non défini') }}
+  when: windows_common_show_connection_info | default(true)
+  tags: 
+    - connectivity
+    - debug
+
+- name: Enregistrer le résultat de connectivité
+  ansible.builtin.set_fact:
+    windows_connectivity_status: "{{ 'OK' if ping_result.ping == 'pong' else 'FAILED' }}"
+    windows_connection_info:
+      machine: "{{ inventory_hostname }}"
+      ip: "{{ ansible_host | default('Unknown') }}"
+      user: "{{ ansible_user | default('Unknown') }}"
+      port: "{{ ansible_port | default('Unknown') }}"
+      connection_type: "{{ ansible_connection | default('Unknown') }}"
+      status: "{{ 'OK' if ping_result.ping == 'pong' else 'FAILED' }}"
+      test_time: "{{ ansible_date_time.iso8601 }}"
+  tags:
+    - connectivity
+    - facts

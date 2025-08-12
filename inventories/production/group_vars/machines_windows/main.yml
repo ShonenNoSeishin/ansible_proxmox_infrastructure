@@ -1,0 +1,26 @@
+---
+# Variables principales pour les machines Windows
+ansible_user: "{{ vault_windows_ansible_user }}"
+ansible_password: "{{ vault_windows_ansible_password }}"
+ansible_port: "{{ vault_windows_ansible_port }}"
+ansible_connection: "{{ vault_windows_ansible_connection }}"
+
+# Configuration SSH pour Windows
+ansible_shell_type: cmd
+ansible_ssh_shell_type: cmd
+
+# Variables Windows communes
+windows_features_to_install:
+  - IIS-WebServerRole
+  - IIS-WebServer
+
+windows_services_to_start:
+  - W32Time
+  - Themes
+
+# Configuration du registre
+registry_base_path: "HKLM:\\Software\\MyCompany"
+
+# Timeouts
+ansible_command_timeout: 60
+ansible_connect_timeout: 60

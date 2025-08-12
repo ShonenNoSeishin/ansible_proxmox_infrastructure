@@ -1,0 +1,23 @@
+---
+# Variables par défaut pour le rôle windows_common
+
+# Contrôle l'exécution des tâches de connectivité
+windows_common_test_connectivity: true
+
+# Contrôle l'affichage des informations de connexion
+windows_common_show_connection_info: true
+
+# Contrôle la collecte d'informations système
+windows_common_collect_system_info: true
+
+# Contrôle l'affichage des informations système
+windows_common_show_system_info: true
+
+# Contrôle la collecte d'informations réseau détaillées (plus lent)
+windows_common_collect_network_info: false
+
+# Timeout par défaut pour les commandes PowerShell
+windows_common_powershell_timeout: 60
+
+# Variables de registre par défaut (peut être surchargé dans group_vars/host_vars)
+windows_common_registry_base_path: "HKLM:\\Software\\MyCompany"

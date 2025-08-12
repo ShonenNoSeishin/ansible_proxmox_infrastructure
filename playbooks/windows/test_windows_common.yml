@@ -1,0 +1,37 @@
+---
+# Playbook de test du rôle windows_common
+# Fichier: playbooks/windows/test_windows_common.yml
+
+- name: Test du rôle windows_common
+  hosts: machines_windows:&proxmox_all_running
+  gather_facts: true
+  vars:
+    # Activer la collecte d'informations réseau pour ce test
+    windows_common_collect_network_info: true
+  roles:
+    - windows_common
+  tasks:
+    - name: Afficher tous les faits collectés par le rôle
+      ansible.builtin.debug:
+        var: windows_host_facts
+      tags:
+        - debug
+        - facts
+
+    - name: Test conditionnel basé sur la connectivité
+      ansible.builtin.debug:
+        msg: "La machine {{ inventory_hostname }} est accessible et prête pour les opérations"
+      when: windows_connectivity_status == "OK"
+      tags:
+        - conditional
+
+    - name: Afficher un résumé rapide
+      ansible.builtin.debug:
+        msg: |
+          Résumé pour {{ inventory_hostname }}:
+          - Status: {{ windows_connectivity_status }}
+          - OS: {{ windows_system_info.WindowsVersion | default('Unknown') }}
+          - RAM: {{ windows_system_info.TotalRAM | default('Unknown') }} GB
+          - Domaine: {{ windows_system_info.Domain | default('Unknown') }}
+      tags:
+        - summary

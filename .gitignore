@@ -1,0 +1,165 @@
+# Ansible Infrastructure - GitIgnore
+# Strict protection for sensitive vault files
+
+# =============================================================================
+# VAULT FILES - NEVER COMMIT THESE
+# =============================================================================
+# All vault files containing sensitive data
+**/vault.yml
+**/vault_*.yml
+vault/
+vault/*/
+**/*vault*.yml
+*.vault.yml
+
+# Backup vault files
+**/vault.yml.bak
+**/vault_*.yml.bak
+**/*.vault
+
+# =============================================================================
+# ANSIBLE GENERATED FILES
+# =============================================================================
+# Ansible retry files
+*.retry
+
+# Ansible logs
+ansible.log
+*.log
+/var/log/ansible.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# =============================================================================
+# ENVIRONMENT & CREDENTIALS
+# =============================================================================
+# Environment files
+.env
+.env.*
+!.env.example
+
+# SSH keys
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+*.ppk
+
+# Proxmox credentials
+proxmox_credentials*
+!proxmox_credentials.example
+
+# Vault password files
+/etc/ansible/vault/vault_pass.txt
+**/vault_pass.txt
+**/.vault_pass
+
+# =============================================================================
+# DEVELOPMENT & TESTING
+# =============================================================================
+# Testing directories
+test_output/
+temp/
+tmp/
+.test/
+
+# Backup directories
+backup/
+backups/
+*.backup
+
+# =============================================================================
+# OPERATING SYSTEM FILES
+# =============================================================================
+# Linux
+*~
+.directory
+.Trash-*
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# =============================================================================
+# EDITORS & IDEs
+# =============================================================================
+# VSCode
+.vscode/
+!.vscode/settings.json.example
+!.vscode/extensions.json.example
+
+# Vim
+*.swp
+*.swo
+*~
+.netrwhist
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# Sublime Text
+*.sublime-workspace
+*.sublime-project
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# =============================================================================
+# DOCUMENTATION BUILD FILES
+# =============================================================================
+# Sphinx documentation
+docs/_build/
+docs/build/
+
+# MkDocs documentation
+site/
+
+# =============================================================================
+# CUSTOM ADDITIONS
+# =============================================================================
+# Add your custom ignore patterns here
+# Personal notes
+NOTES.md
+TODO.md
+personal/
+
+# Local configuration overrides (if any)
+local_config/
+my_*/

@@ -1,0 +1,127 @@
+---
+# Example vault file for Linux machines
+# Copy this file to vault.yml and encrypt it with ansible-vault
+# Command: ansible-vault create inventories/production/group_vars/machines_linux/vault.yml
+
+# =============================================================================
+# LINUX AUTHENTICATION
+# =============================================================================
+# Default SSH connection settings
+vault_linux_ansible_user: "ansible"
+vault_linux_ansible_password: "LinuxPassword123!"  # Use SSH keys when possible
+vault_linux_ansible_port: 22
+
+# SSH private key path (if using key-based auth)
+vault_linux_ansible_ssh_private_key_file: "/path/to/private/key"
+
+# =============================================================================
+# SUDO/PRIVILEGE ESCALATION
+# =============================================================================
+# Sudo password for privilege escalation
+vault_linux_become_password: "SudoPassword123!"
+
+# Alternative sudo user
+vault_linux_sudo_user: "admin"
+vault_linux_sudo_password: "AdminSudoPassword123!"
+
+# =============================================================================
+# SYSTEM USERS
+# =============================================================================
+# Root password (if direct root access is needed)
+vault_linux_root_password: "RootPassword123!"
+
+# System service user
+vault_linux_service_user: "service_account"
+vault_linux_service_password: "ServicePassword123!"
+
+# =============================================================================
+# DATABASE CREDENTIALS
+# =============================================================================
+# MySQL/MariaDB
+vault_linux_mysql_root_password: "MySQLRootPassword123!"
+vault_linux_mysql_user: "app_user"
+vault_linux_mysql_password: "MySQLUserPassword123!"
+
+# PostgreSQL
+vault_linux_postgres_password: "PostgreSQLPassword123!"
+vault_linux_postgres_user: "app_user"
+vault_linux_postgres_user_password: "PostgreSQLUserPassword123!"
+
+# =============================================================================
+# WEB SERVICES
+# =============================================================================
+# Apache/Nginx basic auth
+vault_linux_web_admin_user: "webadmin"
+vault_linux_web_admin_password: "WebAdminPassword123!"
+
+# SSL certificate passwords
+vault_linux_ssl_cert_password: "SSLCertPassword123!"
+vault_linux_ssl_key_passphrase: "SSLKeyPassphrase123!"
+
+# =============================================================================
+# CONTAINER REGISTRIES
+# =============================================================================
+# Docker registry credentials
+vault_linux_docker_registry_user: "docker_user"
+vault_linux_docker_registry_password: "DockerPassword123!"
+vault_linux_docker_registry_email: "docker@company.com"
+
+# =============================================================================
+# MONITORING & LOGGING
+# =============================================================================
+# Monitoring agent credentials
+vault_linux_monitoring_user: "monitoring"
+vault_linux_monitoring_password: "MonitoringPassword123!"
+
+# Log shipping credentials
+vault_linux_logging_user: "logshipper"
+vault_linux_logging_password: "LogShipperPassword123!"
+
+# =============================================================================
+# BACKUP SYSTEMS
+# =============================================================================
+# Backup service credentials
+vault_linux_backup_user: "backup"
+vault_linux_backup_password: "BackupPassword123!"
+
+# Backup encryption key
+vault_linux_backup_encryption_key: "backup-encryption-key-here"
+
+# =============================================================================
+# LDAP/ACTIVE DIRECTORY
+# =============================================================================
+# LDAP bind credentials
+vault_linux_ldap_bind_user: "cn=ansible,ou=service,dc=company,dc=com"
+vault_linux_ldap_bind_password: "LDAPBindPassword123!"
+
+# =============================================================================
+# API KEYS & TOKENS
+# =============================================================================
+# Various service API keys
+vault_linux_api_key: "your-service-api-key"
+vault_linux_webhook_secret: "webhook-secret-key"
+
+# =============================================================================
+# MAIL CONFIGURATION
+# =============================================================================
+# Mail server credentials
+vault_linux_mail_user: "noreply@company.com"
+vault_linux_mail_password: "MailPassword123!"
+
+# =============================================================================
+# VPN & NETWORK
+# =============================================================================
+# VPN credentials if managing VPN connections
+vault_linux_vpn_user: "vpn_user"
+vault_linux_vpn_password: "VPNPassword123!"
+vault_linux_vpn_preshared_key: "vpn-preshared-key"
+
+# =============================================================================
+# NOTES
+# =============================================================================
+# Linux-specific notes:
+# 1. Prefer SSH key-based authentication over passwords
+# 2. Use sudo with NOPASSWD for service accounts when appropriate
+# 3. Store SSH private keys securely and reference them in vault
+# 4. Consider using centralized authentication (LDAP, Active Directory)
+# 5. Regularly rotate credentials and SSH keys

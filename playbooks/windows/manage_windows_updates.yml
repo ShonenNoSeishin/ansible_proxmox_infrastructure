@@ -1,0 +1,234 @@
+---
+# Playbook de gestion des mises à jour Windows - Production
+# Fichier: playbooks/windows/manage_windows_updates.yml
+
+- name: Gestion des mises à jour Windows
+  hosts: machines_windows
+  gather_facts: true
+  vars:
+    # Configuration par défaut
+    update_categories:
+      - SecurityUpdates
+      - CriticalUpdates
+    
+    # Contrôle des redémarrages
+    allow_reboot: false
+    reboot_timeout: 1800  # 30 minutes
+    
+    # Mode d'opération: search, download, install
+    update_mode: "search"
+    
+    # Log des mises à jour
+    update_log_path: "C:\\Logs\\ansible_updates.log"
+    
+    # Mises à jour à exclure (patterns regex)
+    updates_to_exclude: []
+    
+    # Mises à jour spécifiques à installer (KB numbers)
+    specific_updates: []
+
+  roles:
+    - windows_common
+
+  tasks:
+    # Étape 1: Créer le répertoire de logs
+    - name: Ensure log directory exists
+      ansible.windows.win_file:
+        path: "{{ update_log_path | dirname }}"
+        state: directory
+      tags:
+        - setup
+        - logs
+
+    # Étape 2: Mode SEARCH - Recherche des mises à jour disponibles
+    - name: Search for available Windows updates
+      ansible.windows.win_updates:
+        category_names: "{{ update_categories }}"
+        state: searched
+        log_path: "{{ update_log_path }}"
+      register: available_updates
+      when: update_mode in ['search', 'download', 'install']
+      tags:
+        - search
+        - updates
+
+    - name: Display available updates
+      ansible.builtin.debug:
+        msg: |
+          ==================== MISES À JOUR DISPONIBLES ====================
+          Machine: {{ inventory_hostname }}
+          Nombre de mises à jour: {{ available_updates.updates | length if available_updates.updates is defined else 0 }}
+          
+          {% if available_updates.updates is defined and available_updates.updates | length > 0 %}
+          Liste des mises à jour:
+          {% for update in available_updates.updates %}
+          - {{ update.title }} ({{ update.kb | default('No KB') }})
+            Taille: {{ (update.size / 1048576) | round(2) }} MB
+            Critique: {{ update.severity | default('Unknown') }}
+          {% endfor %}
+          {% else %}
+          Aucune mise à jour disponible.
+          {% endif %}
+          ================================================================
+      when: update_mode in ['search', 'download', 'install'] and available_updates is defined
+      tags:
+        - search
+        - debug
+
+    # Étape 3: Mode DOWNLOAD - Téléchargement des mises à jour
+    - name: Download Windows updates without installing
+      ansible.windows.win_updates:
+        category_names: "{{ update_categories }}"
+        state: downloaded
+        log_path: "{{ update_log_path }}"
+        reject_list: "{{ updates_to_exclude }}"
+        accept_list: "{{ specific_updates if specific_updates | length > 0 else omit }}"
+      register: downloaded_updates
+      when: update_mode in ['download', 'install']
+      tags:
+        - download
+        - updates
+
+    - name: Display download results
+      ansible.builtin.debug:
+        msg: |
+          ==================== TÉLÉCHARGEMENT TERMINÉ ====================
+          Machine: {{ inventory_hostname }}
+          Mises à jour téléchargées: {{ downloaded_updates.updates | length if downloaded_updates.updates is defined else 0 }}
+          Redémarrage requis après installation: {{ downloaded_updates.reboot_required | default(false) }}
+          ================================================================
+      when: update_mode in ['download', 'install'] and downloaded_updates is defined
+      tags:
+        - download
+        - debug
+
+    # Étape 4: Mode INSTALL - Installation des mises à jour
+    - name: Install Windows updates
+      ansible.windows.win_updates:
+        category_names: "{{ update_categories }}"
+        state: installed
+        reboot: "{{ allow_reboot }}"
+        reboot_timeout: "{{ reboot_timeout }}"
+        log_path: "{{ update_log_path }}"
+        reject_list: "{{ updates_to_exclude }}"
+        accept_list: "{{ specific_updates if specific_updates | length > 0 else omit }}"
+      register: installed_updates
+      when: update_mode == 'install'
+      tags:
+        - install
+        - updates
+
+    - name: Display installation results
+      ansible.builtin.debug:
+        msg: |
+          ==================== INSTALLATION TERMINÉE ====================
+          Machine: {{ inventory_hostname }}
+          Mises à jour installées: {{ installed_updates.updates | length if installed_updates.updates is defined else 0 }}
+          Redémarrage effectué: {{ installed_updates.reboot_required | default(false) }}
+          
+          {% if installed_updates.updates is defined and installed_updates.updates | length > 0 %}
+          Mises à jour installées:
+          {% for update in installed_updates.updates %}
+          - {{ update.title }} ({{ update.kb | default('No KB') }})
+          {% endfor %}
+          {% endif %}
+          ================================================================
+      when: update_mode == 'install' and installed_updates is defined
+      tags:
+        - install
+        - debug
+
+    # Étape 5: Vérification post-installation
+    - name: Check if reboot is required after updates
+      ansible.windows.win_shell: |
+        $rebootRequired = $false
+        
+        # Vérifier les clés de registre pour redémarrage en attente
+        $regKeys = @(
+            "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired",
+            "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending",
+            "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\PendingFileRenameOperations"
+        )
+        
+        foreach ($key in $regKeys) {
+            if (Test-Path $key) {
+                $rebootRequired = $true
+                break
+            }
+        }
+        
+        # Vérifier les services en attente de redémarrage
+        $services = Get-Service | Where-Object { $_.Status -eq 'StopPending' -or $_.Status -eq 'StartPending' }
+        if ($services) {
+            $rebootRequired = $true
+        }
+        
+        return @{
+            RebootRequired = $rebootRequired
+            PendingServices = $services.Count
+            CheckTime = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+        } | ConvertTo-Json
+      register: reboot_check
+      when: update_mode == 'install'
+      tags:
+        - post_install
+        - reboot_check
+
+    - name: Display reboot requirement status
+      ansible.builtin.debug:
+        var: reboot_check.stdout | from_json
+      when: update_mode == 'install' and reboot_check is defined
+      tags:
+        - post_install
+        - debug
+
+    # Étape 6: Rapport final
+    - name: Generate final update report
+      ansible.builtin.set_fact:
+        final_update_report:
+          machine: "{{ inventory_hostname }}"
+          system: "{{ windows_system_info.ComputerName | default('Unknown') }}"
+          os_version: "{{ windows_system_info.WindowsVersion | default('Unknown') }}"
+          connectivity: "{{ windows_connectivity_status }}"
+          update_mode: "{{ update_mode }}"
+          categories: "{{ update_categories }}"
+          available_count: "{{ available_updates.updates | length if available_updates.updates is defined else 'N/A' }}"
+          downloaded_count: "{{ downloaded_updates.updates | length if downloaded_updates is defined and downloaded_updates.updates is defined else 'N/A' }}"
+          installed_count: "{{ installed_updates.updates | length if installed_updates is defined and installed_updates.updates is defined else 'N/A' }}"
+          reboot_required: "{{ reboot_check.stdout | from_json | json_query('RebootRequired') if reboot_check is defined else 'N/A' }}"
+          allow_reboot: "{{ allow_reboot }}"
+          timestamp: "{{ ansible_date_time.iso8601 }}"
+      tags:
+        - report
+
+    - name: Display final report
+      ansible.builtin.debug:
+        msg: |
+          ==================== RAPPORT FINAL ====================
+          Machine: {{ final_update_report.machine }} ({{ final_update_report.system }})
+          OS: {{ final_update_report.os_version }}
+          Mode: {{ final_update_report.update_mode | upper }}
+          Catégories: {{ final_update_report.categories | join(', ') }}
+          
+          RÉSULTATS:
+          - Disponibles: {{ final_update_report.available_count }}
+          - Téléchargées: {{ final_update_report.downloaded_count }}
+          - Installées: {{ final_update_report.installed_count }}
+          - Redémarrage requis: {{ final_update_report.reboot_required }}
+          - Redémarrage autorisé: {{ final_update_report.allow_reboot }}
+          
+          Timestamp: {{ final_update_report.timestamp }}
+          ======================================================
+      tags:
+        - report
+
+    # Étape 7: Sauvegarde du rapport
+    - name: Save update report to file
+      ansible.builtin.copy:
+        content: "{{ final_update_report | to_nice_json }}"
+        dest: "/tmp/windows_updates_{{ inventory_hostname }}_{{ ansible_date_time.epoch }}.json"
+      delegate_to: localhost
+      run_once: false
+      tags:
+        - report
+        - save

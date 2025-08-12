@@ -1,0 +1,43 @@
+# Collections et rôles Ansible requis
+# Fichier: requirements.yml
+
+---
+# Collections Ansible requises
+collections:
+  # Collection pour les modules Windows
+  - name: ansible.windows
+    version: ">=2.0.0"
+  
+  # Collection pour Proxmox
+  - name: community.proxmox
+    version: ">=1.0.0"
+  
+  # Collection générale de la communauté
+  - name: community.general
+    version: ">=8.0.0"
+  
+  # Collection pour les modules crypto/certificats
+  - name: community.crypto
+    version: ">=2.0.0"
+  
+  # Collection POSIX pour Linux
+  - name: ansible.posix
+    version: ">=1.0.0"
+  
+  # Collection pour Docker si nécessaire
+  - name: community.docker
+    version: ">=3.0.0"
+
+# Rôles Ansible depuis Ansible Galaxy (optionnel)
+roles:
+  # Rôle pour la gestion des utilisateurs
+  - name: geerlingguy.firewall
+    version: "2.5.0"
+  
+  # Rôle pour NTP
+  - name: geerlingguy.ntp
+    version: "2.1.0"
+  
+  # Rôle pour la sécurité Linux
+  - name: dev-sec.os-hardening
+    version: "7.10.0"

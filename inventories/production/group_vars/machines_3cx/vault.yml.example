@@ -1,0 +1,142 @@
+---
+# Example vault file for 3CX machines
+# Copy this file to vault.yml and encrypt it with ansible-vault
+# Command: ansible-vault create inventories/production/group_vars/machines_3cx/vault.yml
+
+# =============================================================================
+# 3CX SYSTEM AUTHENTICATION
+# =============================================================================
+# 3CX Management Console credentials
+vault_3cx_admin_user: "3cxadmin"
+vault_3cx_admin_password: "3CXAdminPassword123!"
+
+# 3CX Web Management interface
+vault_3cx_web_admin_user: "admin"
+vault_3cx_web_admin_password: "3CXWebPassword123!"
+
+# =============================================================================
+# 3CX DATABASE
+# =============================================================================
+# 3CX Database credentials (usually PostgreSQL)
+vault_3cx_db_user: "phonesystem"
+vault_3cx_db_password: "3CXDatabasePassword123!"
+vault_3cx_db_name: "database_single_tenant"
+
+# Database maintenance user
+vault_3cx_db_admin_user: "postgres"
+vault_3cx_db_admin_password: "PostgreSQLAdminPassword123!"
+
+# =============================================================================
+# 3CX LICENSING
+# =============================================================================
+# 3CX License key
+vault_3cx_license_key: "your-3cx-license-key-here"
+
+# 3CX Support PIN (for support access)
+vault_3cx_support_pin: "your-support-pin"
+
+# =============================================================================
+# SIP TRUNK CONFIGURATION
+# =============================================================================
+# SIP Provider credentials
+vault_3cx_sip_provider_user: "sip_username"
+vault_3cx_sip_provider_password: "SIPProviderPassword123!"
+vault_3cx_sip_provider_realm: "sip.provider.com"
+
+# Additional SIP trunk (if using multiple providers)
+vault_3cx_sip_backup_user: "backup_sip_user"
+vault_3cx_sip_backup_password: "BackupSIPPassword123!"
+
+# =============================================================================
+# SYSTEM INTEGRATION
+# =============================================================================
+# Windows domain integration (if 3CX is domain-joined)
+vault_3cx_domain_user: "DOMAIN\\3cx_service"
+vault_3cx_domain_password: "DomainServicePassword123!"
+
+# Service account for 3CX services
+vault_3cx_service_user: "3CXService"
+vault_3cx_service_password: "3CXServicePassword123!"
+
+# =============================================================================
+# EMAIL CONFIGURATION
+# =============================================================================
+# SMTP server for 3CX email notifications
+vault_3cx_smtp_user: "3cx@company.com"
+vault_3cx_smtp_password: "SMTPPassword123!"
+
+# =============================================================================
+# BACKUP & MAINTENANCE
+# =============================================================================
+# FTP/SFTP credentials for backup storage
+vault_3cx_backup_ftp_user: "3cx_backup"
+vault_3cx_backup_ftp_password: "BackupFTPPassword123!"
+
+# Cloud backup credentials (if using cloud storage)
+vault_3cx_cloud_backup_key: "cloud-backup-access-key"
+vault_3cx_cloud_backup_secret: "cloud-backup-secret-key"
+
+# =============================================================================
+# MONITORING & LOGGING
+# =============================================================================
+# SNMP community for monitoring
+vault_3cx_snmp_community: "3cx_monitoring"
+
+# Syslog server credentials (if required)
+vault_3cx_syslog_user: "3cx_logs"
+vault_3cx_syslog_password: "SyslogPassword123!"
+
+# =============================================================================
+# TELEPHONY FEATURES
+# =============================================================================
+# Call recording storage credentials
+vault_3cx_recording_user: "recording_user"
+vault_3cx_recording_password: "RecordingPassword123!"
+
+# Voicemail storage (if using external storage)
+vault_3cx_voicemail_user: "voicemail_user"
+vault_3cx_voicemail_password: "VoicemailPassword123!"
+
+# =============================================================================
+# API & INTEGRATION
+# =============================================================================
+# 3CX REST API credentials
+vault_3cx_api_user: "api_user"
+vault_3cx_api_password: "APIPassword123!"
+
+# CRM integration credentials
+vault_3cx_crm_user: "crm_integration"
+vault_3cx_crm_password: "CRMPassword123!"
+vault_3cx_crm_api_key: "crm-api-key"
+
+# =============================================================================
+# SECURITY
+# =============================================================================
+# SSL certificate passwords
+vault_3cx_ssl_cert_password: "SSLCertPassword123!"
+
+# IPSec VPN credentials (for remote extensions)
+vault_3cx_ipsec_preshared_key: "ipsec-preshared-key"
+
+# =============================================================================
+# FIRMWARE & PROVISIONING
+# =============================================================================
+# Phone provisioning server credentials
+vault_3cx_provisioning_user: "provisioning"
+vault_3cx_provisioning_password: "ProvisioningPassword123!"
+
+# Firmware update server credentials
+vault_3cx_firmware_user: "firmware_user"
+vault_3cx_firmware_password: "FirmwarePassword123!"
+
+# =============================================================================
+# NOTES
+# =============================================================================
+# 3CX-specific notes:
+# 1. Change default passwords immediately after installation
+# 2. Use strong passwords for SIP accounts to prevent toll fraud
+# 3. Regularly update 3CX to the latest version
+# 4. Monitor call logs for suspicious activity
+# 5. Backup configuration regularly
+# 6. Test disaster recovery procedures
+# 7. Secure SIP traffic with TLS when possible

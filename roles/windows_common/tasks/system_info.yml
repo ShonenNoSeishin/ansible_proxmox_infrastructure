@@ -1,0 +1,106 @@
+---
+# Tâches de collecte d'informations système Windows
+
+- name: Collecter les informations système Windows
+  ansible.windows.win_shell: |
+    $info = @{
+      ComputerName = $env:COMPUTERNAME
+      WindowsVersion = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion").ProductName
+      BuildNumber = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion").CurrentBuildNumber
+      Architecture = $env:PROCESSOR_ARCHITECTURE
+      Domain = (Get-WmiObject -Class Win32_ComputerSystem).Domain
+      TotalRAM = [math]::round((Get-WmiObject -Class Win32_ComputerSystem).TotalPhysicalMemory/1GB, 2)
+      FreeSpace = [math]::round((Get-WmiObject -Class Win32_LogicalDisk -Filter "DeviceID='C:'").FreeSpace/1GB, 2)
+      LastBootTime = (Get-WmiObject -Class Win32_OperatingSystem).ConvertToDateTime((Get-WmiObject -Class Win32_OperatingSystem).LastBootUpTime)
+      TimeZone = (Get-TimeZone).Id
+      PowerPlan = (Get-WmiObject -Namespace root\cimv2\power -Class Win32_PowerPlan | Where-Object {$_.IsActive}).ElementName
+    }
+    $info | ConvertTo-Json
+  register: system_info_raw
+  tags: 
+    - facts
+    - system_info
+
+- name: Parser les informations système
+  ansible.builtin.set_fact:
+    windows_system_info: "{{ system_info_raw.stdout | from_json }}"
+  tags:
+    - facts
+    - system_info
+
+- name: Afficher les informations système
+  ansible.builtin.debug:
+    msg: |
+      ==================== INFORMATIONS SYSTÈME ====================
+      Nom de la machine: {{ windows_system_info.ComputerName }}
+      Version Windows: {{ windows_system_info.WindowsVersion }}
+      Build: {{ windows_system_info.BuildNumber }}
+      Architecture: {{ windows_system_info.Architecture }}
+      Domaine: {{ windows_system_info.Domain }}
+      RAM totale: {{ windows_system_info.TotalRAM }} GB
+      Espace libre (C:): {{ windows_system_info.FreeSpace }} GB
+      Dernier démarrage: {{ windows_system_info.LastBootTime }}
+      Fuseau horaire: {{ windows_system_info.TimeZone }}
+      Plan d'alimentation: {{ windows_system_info.PowerPlan }}
+      ==============================================================
+  when: windows_common_show_system_info | default(true)
+  tags: 
+    - facts
+    - debug
+
+- name: Collecter des informations réseau supplémentaires
+  ansible.windows.win_shell: |
+    $networkInfo = @{
+      Interfaces = @()
+      DefaultGateway = ""
+      DNSServers = @()
+    }
+    
+    # Interfaces réseau actives
+    $interfaces = Get-WmiObject -Class Win32_NetworkAdapterConfiguration | Where-Object {$_.IPEnabled -eq $true}
+    foreach ($interface in $interfaces) {
+      $interfaceInfo = @{
+        Description = $interface.Description
+        IPAddress = $interface.IPAddress
+        SubnetMask = $interface.IPSubnet
+        MACAddress = $interface.MACAddress
+      }
+      $networkInfo.Interfaces += $interfaceInfo
+      
+      # Passerelle par défaut
+      if ($interface.DefaultIPGateway) {
+        $networkInfo.DefaultGateway = $interface.DefaultIPGateway[0]
+      }
+      
+      # Serveurs DNS
+      if ($interface.DNSServerSearchOrder) {
+        $networkInfo.DNSServers = $interface.DNSServerSearchOrder
+      }
+    }
+    
+    $networkInfo | ConvertTo-Json -Depth 3
+  register: network_info_raw
+  when: windows_common_collect_network_info | default(false)
+  tags:
+    - facts
+    - network_info
+
+- name: Parser les informations réseau
+  ansible.builtin.set_fact:
+    windows_network_info: "{{ network_info_raw.stdout | from_json }}"
+  when: windows_common_collect_network_info | default(false) and network_info_raw is defined
+  tags:
+    - facts
+    - network_info
+
+- name: Créer un fait consolidé avec toutes les informations
+  ansible.builtin.set_fact:
+    windows_host_facts:
+      connectivity: "{{ windows_connection_info | default({}) }}"
+      system: "{{ windows_system_info | default({}) }}"
+      network: "{{ windows_network_info | default({}) }}"
+      collection_time: "{{ ansible_date_time.iso8601 }}"
+      ansible_managed: true
+  tags:
+    - facts
+    - consolidation
